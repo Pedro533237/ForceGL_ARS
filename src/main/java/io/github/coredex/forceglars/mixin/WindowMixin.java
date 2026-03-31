@@ -2,6 +2,7 @@ package io.github.coredex.forceglars.mixin;
 
 import net.minecraft.client.util.Window;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,10 +14,36 @@ import io.github.coredex.forceglars.ForceGLARS;
 @Mixin(Window.class)
 public class WindowMixin {
     @Shadow private long handle;
+    private static boolean rendererLogged = false;
+
+    private void logRendererIfNeeded() {
+        if (rendererLogged || !ForceGLARS.forceCompatibilityMode) {
+            return;
+        }
+
+        rendererLogged = true;
+        String renderer = GL11.glGetString(GL11.GL_RENDERER);
+        if (renderer == null) {
+            return;
+        }
+
+        String lowered = renderer.toLowerCase();
+        if (lowered.contains("llvmpipe") || lowered.contains("softpipe") || lowered.contains("swrast")) {
+            ForceGLARS.LOGGER.warn("Detected software renderer: {}", renderer);
+            ForceGLARS.LOGGER.warn("For Intel i3-370M/HD era hardware, install native Intel/Mesa drivers and remove software GL overrides.");
+        } else if (!lowered.contains("intel")) {
+            ForceGLARS.LOGGER.warn("Renderer is not Intel integrated GPU: {}", renderer);
+            ForceGLARS.LOGGER.warn("If you want Intel HD by default, disable PRIME/offload overrides and force iGPU in BIOS/OS graphics settings.");
+        } else {
+            ForceGLARS.LOGGER.info("Active OpenGL renderer: {}", renderer);
+        }
+    }
 
     // Use require=0 to make this injection optional if the method doesn't match exactly
     @Inject(method = "setVsync", at = @At("HEAD"), cancellable = true, require = 0)
     private void onSetVsync(boolean vsync, CallbackInfo ci) {
+        logRendererIfNeeded();
+
         // In compatibility mode, we want to ensure vsync is enabled to prevent GPU stress
         if (ForceGLARS.forceCompatibilityMode && !vsync) {
             ForceGLARS.LOGGER.info("Forcing VSync ON for compatibility mode");
@@ -24,7 +51,7 @@ public class WindowMixin {
             ci.cancel(); // Skip the original method
         }
     }
-    
+
     // Make this method optional as well
     @Inject(method = "setFramerateLimit", at = @At("HEAD"), cancellable = true, require = 0)
     private void onSetFramerateLimit(int fps, CallbackInfo ci) {

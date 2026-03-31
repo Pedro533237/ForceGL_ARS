@@ -22,6 +22,7 @@ import java.nio.file.Path;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -83,8 +84,18 @@ public class ForceGLARS {
         if (forceCompatibilityMode) {
             LOGGER.info("ForceGL2.0 Compatibility Mode is ENABLED. Using maximum compatibility settings for OpenGL 2.0.");
 
-            // Set system property to further assist with OpenGL 2.0 compatibility
-            System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "true");
+            // Keep hardware acceleration preferred (avoid llvmpipe/swrast unless user disables this option)
+            if (ForceGLARSConfig.CONFIG.instance().avoidSoftwareRenderer) {
+                System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "false");
+                setProcessEnvVar("LIBGL_ALWAYS_SOFTWARE", "0");
+                setProcessEnvVar("DRI_PRIME", "0");
+                setProcessEnvVar("__NV_PRIME_RENDER_OFFLOAD", "0");
+                setProcessEnvVar("__GLX_VENDOR_LIBRARY_NAME", "intel");
+                LOGGER.info("Software OpenGL renderers are blocked by config (avoidSoftwareRenderer=true)");
+                LOGGER.info("Integrated GPU preference enabled (DRI_PRIME=0 / Intel GLX vendor when supported)");
+            } else {
+                System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "true");
+            }
 
             // These properties help with older GL drivers
             System.setProperty("org.lwjgl.opengl.Display.noinput", "true");
@@ -229,6 +240,28 @@ public class ForceGLARS {
             LOGGER.warn("Shader '{}' failed to load but was suppressed in compatibility mode", shaderName);
         } else {
             LOGGER.error("Failed to load shader: {}", shaderName, e);
+        }
+    }
+
+    private static void setProcessEnvVar(String key, String value) {
+        try {
+            Class<?> processEnvironment = Class.forName("java.lang.ProcessEnvironment");
+            Method getenv = processEnvironment.getDeclaredMethod("getenv");
+            getenv.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, String> env = (Map<String, String>) getenv.invoke(null);
+            env.put(key, value);
+        } catch (Exception ignored) {
+            try {
+                Map<String, String> env = System.getenv();
+                Field field = env.getClass().getDeclaredField("m");
+                field.setAccessible(true);
+                @SuppressWarnings("unchecked")
+                Map<String, String> writableEnv = (Map<String, String>) field.get(env);
+                writableEnv.put(key, value);
+            } catch (Exception e) {
+                LOGGER.debug("Could not set process env var {}={}: {}", key, value, e.getMessage());
+            }
         }
     }
 }

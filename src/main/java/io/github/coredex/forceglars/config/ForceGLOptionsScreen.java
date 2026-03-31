@@ -16,6 +16,7 @@ public class ForceGLOptionsScreen extends Screen {
     private boolean irisIFOverride = ForceGLARSConfig.CONFIG.instance().irisIFOverride;
     private boolean forceCompatibilityMode = ForceGLARSConfig.CONFIG.instance().forceCompatibilityMode;
     private boolean disableVBO = ForceGLARSConfig.CONFIG.instance().disableVBO;
+    private boolean avoidSoftwareRenderer = ForceGLARSConfig.CONFIG.instance().avoidSoftwareRenderer;
 
     // Do not touch the line below as it's required in a different class.
     public static boolean ARScalingEnabled = ForceGLARSConfig.CONFIG.instance().adaptiveRenderScalingEnabled;
@@ -114,6 +115,7 @@ public class ForceGLOptionsScreen extends Screen {
                     ForceGLARSConfig.CONFIG.instance().irisIFOverride = irisIFOverride;
                     ForceGLARSConfig.CONFIG.instance().forceCompatibilityMode = forceCompatibilityMode;
                     ForceGLARSConfig.CONFIG.instance().disableVBO = disableVBO;
+                    ForceGLARSConfig.CONFIG.instance().avoidSoftwareRenderer = avoidSoftwareRenderer;
                     ForceGLARSConfig.CONFIG.instance().adaptiveRenderScalingEnabled = ARScalingEnabled;
                     ForceGLARSConfig.CONFIG.instance().minFpsThreshold = minFpsThreshold;
                     ForceGLARSConfig.CONFIG.instance().maxFpsThreshold = maxFpsThreshold;
@@ -218,12 +220,20 @@ public class ForceGLOptionsScreen extends Screen {
             ).dimensions(centerX, centerY + 4 * spacing, 200, buttonHeight).build());
 
             this.addDrawableChild(ButtonWidget.builder(
+                    Text.literal("Avoid llvmpipe/swrast: " + (avoidSoftwareRenderer ? "ON" : "OFF")),
+                    button -> {
+                        avoidSoftwareRenderer = !avoidSoftwareRenderer;
+                        button.setMessage(Text.literal("Avoid llvmpipe/swrast: " + (avoidSoftwareRenderer ? "ON" : "OFF")));
+                    }
+            ).dimensions(centerX, centerY + 5 * spacing, 200, buttonHeight).build());
+
+            this.addDrawableChild(ButtonWidget.builder(
                     Text.literal("Iris IF Override: " + (irisIFOverride ? "ON" : "OFF")),
                     button -> {
                         irisIFOverride = !irisIFOverride;
                         button.setMessage(Text.literal("Iris IF Override: " + (irisIFOverride ? "ON" : "OFF")));
                     }
-            ).dimensions(centerX, centerY + 5 * spacing, 200, buttonHeight).build());
+            ).dimensions(centerX, centerY + 6 * spacing, 200, buttonHeight).build());
         } else {
             if (currentConfigPage == 1) {
                 // ARS Config (existing code)
