@@ -42,6 +42,9 @@ public class ForceGLARSConfig {
     public boolean disableVBO = false;
 
     @SerialEntry
+    public boolean avoidSoftwareRenderer = true;
+
+    @SerialEntry
     public boolean adaptiveRenderScalingEnabled = false;
 
     @SerialEntry
@@ -153,6 +156,12 @@ public class ForceGLARSConfig {
                                     .name(Text.translatable("Disable VBO"))
                                     .description(OptionDescription.of(Text.translatable("Disables Vertex Buffer Objects for maximum compatibility with legacy GPUs. Only works in compatibility mode.")))
                                     .binding(defaults.disableVBO, () -> config.disableVBO, newVal -> config.disableVBO = newVal)
+                                    .controller(BooleanControllerBuilder::create)
+                                    .build())
+                            .option(Option.<Boolean>createBuilder()
+                                    .name(Text.translatable("Avoid Software Renderer (llvmpipe)"))
+                                    .description(OptionDescription.of(Text.translatable("Prefer hardware OpenGL and block software renderers like llvmpipe/swrast when possible.")))
+                                    .binding(defaults.avoidSoftwareRenderer, () -> config.avoidSoftwareRenderer, newVal -> config.avoidSoftwareRenderer = newVal)
                                     .controller(BooleanControllerBuilder::create)
                                     .build())
                             .option(Option.<Boolean>createBuilder()
